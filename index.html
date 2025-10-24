@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="stytle.css">
 </head>
 <body>
     <header class="app-header">
@@ -50,7 +50,9 @@
                 </div>
 
                 <div class="actions">
+                    <button type="button" id="addItemBtn" class="btn">Add Item</button>
                     <button type="submit" class="btn primary">Generate & Print</button>
+                    <button type="submit" class="btn primary">Send email</button>
                     <button type="button" id="resetBtn" class="btn">Reset</button>
                 </div>
             </form>
@@ -72,12 +74,16 @@
                     <strong id="r-customer">—</strong>
                 </div>
                 <div class="row">
-                    <span>Item:</span>
-                    <strong id="r-item">—</strong>
+                    <ul>
+                        <li>Item:</li>
+                        <li>Amount</li>
+                    </ul>
+                    <div id="r-items-container" class="items-list"></div>
                 </div>
-                <div class="row">
-                    <span>Amount:</span>
-                    <strong id="r-amount">—</strong>
+                
+                <div class="row total-row">
+                    <span>Total:</span>
+                    <strong id="r-total">$0.00</strong>
                 </div>
                 <div class="row">
                     <span>Date:</span>
@@ -100,5 +106,3 @@
     <script src="app.js"></script>
 </body>
 </html>
-
-

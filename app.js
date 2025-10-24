@@ -1,10 +1,25 @@
 (() => {
+  //EmailJS Configuration
+  const EMAILJS_SERVICE_ID = 'service_85bpmi4'; 
+  const EMAILJS_TEMPLATE_ID = 'template_z83qgqp'; 
+  const EMAILJS_PUBLIC_KEY = 'oLqZO8rzTywylXUXu';
+
+  try {
+      // Initialize EmailJS
+      emailjs.init(EMAILJS_PUBLIC_KEY);
+  } catch (e) {
+      console.error("EmailJS not loaded. Is the CDN script tag correct?", e);
+  }
+  // -------------------------------------------------------------
+
   const form = document.getElementById('receipt-form');
   const resetBtn = document.getElementById('resetBtn');
+  const addItemBtn = document.getElementById('addItemBtn');
+  const sendEmailBtn = form.querySelector('.actions button:nth-child(3)'); 
 
   const elCustomer = document.getElementById('r-customer');
-  const elItem = document.getElementById('r-item');
-  const elAmount = document.getElementById('r-amount');
+  const elItemsContainer = document.getElementById('r-items-container'); 
+  const elTotal = document.getElementById('r-total');
   const elDate = document.getElementById('r-date');
   const elMessage = document.getElementById('r-message');
 
@@ -14,6 +29,26 @@
   const inputAmount = document.getElementById('amount');
   const inputDate = document.getElementById('date');
   const inputMessage = document.getElementById('message');
+  
+  let lineItems = [];
+  let pendingItem = null;
+
+  addItemBtn.addEventListener('click', () => {
+    const item = inputItem.value.trim();
+    const amount = Number(inputAmount.value);
+
+    if (item && amount > 0) {
+      lineItems.push({ item, amount });
+      
+      inputItem.value = '';
+      inputAmount.value = '';
+      pendingItem = null; 
+
+      updateReceipt(getCurrentData());
+    } else {
+        alert("Please enter a valid Item name and Amount before adding.");
+    }
+  });
 
   // Helpers
   function formatCurrency(amount) {
@@ -33,64 +68,153 @@
     }
   }
 
-  function updateReceipt({ customer, item, amount, date, message }) {
-    elCustomer.textContent = customer || '—';
-    elItem.textContent = item || '—';
-    elAmount.textContent = formatCurrency(amount);
-    elDate.textContent = formatDate(date);
-    elMessage.textContent = message || 'Thank you for choosing Gadget Co!';
+  function getCurrentData() {
+      return {
+          customer: inputCustomer.value.trim(),
+          email: (inputEmail && inputEmail.value.trim()) || '',
+          item: inputItem.value.trim(),
+          amount: inputAmount.value,
+          date: inputDate.value,
+          message: inputMessage.value.trim()
+      };
   }
 
-  function handleSubmit(event) {
-    event.preventDefault();
-    const data = {
-      customer: inputCustomer.value.trim(),
-      email: (inputEmail && inputEmail.value.trim()) || '',
-      item: inputItem.value.trim(),
-      amount: inputAmount.value,
-      date: inputDate.value,
-      message: inputMessage.value.trim()
-    };
+  function updateReceipt(data) {
+    elCustomer.textContent = data.customer || '—';
+    elDate.textContent = formatDate(data.date);
+    elMessage.textContent = data.message || 'Thank you for choosing SMART PHONES UGANDA!';
 
-    updateReceipt(data);
+    const allItems = [...lineItems];
+    if (data.item && Number(data.amount) > 0) {
+        allItems.push({ item: data.item, amount: Number(data.amount) });
+    }
+    
+    const totalAmount = allItems.reduce((sum, item) => sum + item.amount, 0);
+    elTotal.textContent = formatCurrency(totalAmount);
+    
+    let itemsHtml = '';
+    if (allItems.length === 0) {
+        itemsHtml = '<p class="no-items">No items added yet.</p>';
+    } else {
+        itemsHtml = `
+            ${allItems.map(item => `
+                <div class="item-row">
+                    <span>${item.item}</span>
+                    <span>${formatCurrency(item.amount)}</span>
+                </div>
+            `).join('')}
+        `;
+    }
+    elItemsContainer.innerHTML = itemsHtml;
+  }
+  
+  // --- Email Logic ---
+  async function sendReceiptEmail(data, totalAmount) {
+    if (!data.email) {
+      alert("Please enter a customer email address to send the receipt.");
+      return;
+    }
+    
+    if (lineItems.length === 0) {
+        alert("Cannot send email: No items have been added to the receipt.");
+        return;
+    }
+
+    //--- HTML for item rows ---
+    const itemRowsHTML = lineItems.map(i => 
+        `<tr>
+            <td style="border: 1px solid #ddd; padding: 10px; text-align: left;">${i.item}</td>
+            <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">${formatCurrency(i.amount)}</td>
+        </tr>`
+    ).join('');
+
+    try {
+        const emailParams = {
+            // Recipient and Customer Info
+            to_email: data.email, 
+            customer_name: data.customer || 'Valued Customer',
+            
+            // Template Variables
+            receipt_date: formatDate(data.date),
+            total_amount: formatCurrency(totalAmount),
+            item_details: itemRowsHTML, 
+            appreciation_message: data.message || 'Thank you for choosing SMART PHONES UGANDA!',
+        };
+
+        const result = await emailjs.send(
+            EMAILJS_SERVICE_ID, 
+            EMAILJS_TEMPLATE_ID, 
+            emailParams
+        );
+        
+        //console.log('Email successfully sent!', result.status, result.text);
+        alert(`Receipt sent to ${data.email} successfully!`);
+
+    } catch (error) {
+        console.error('Email sending failed:', error);
+        alert('Failed to send receipt email. Check console for details.');
+    }
+  }
+  // -------------------------------------------------------------------
+  
+  function finalizeReceiptData() {
+    // Add pending item before generating data
+    const pendingItemName = inputItem.value.trim();
+    const pendingAmountVal = Number(inputAmount.value);
+    if (pendingItemName && pendingAmountVal > 0) {
+         lineItems.push({ item: pendingItemName, amount: pendingAmountVal });
+         inputItem.value = '';
+         inputAmount.value = '';
+    }
+
+    const data = getCurrentData();
+    const totalAmount = lineItems.reduce((sum, item) => sum + item.amount, 0);
+
+    // Final update on the display
+    updateReceipt(data); 
+    
+    return { data, totalAmount };
+  }
+
+  function handleGenerateAndPrint(event) {
+    event.preventDefault(); 
+    
+    const { data, totalAmount } = finalizeReceiptData();
 
     // Persist a simple copy locally
     try {
       const existing = JSON.parse(localStorage.getItem('receipts') || '[]');
       const id = Date.now();
-      existing.push({ id, ...data });
+      existing.push({ id, customer: data.customer, total: totalAmount, items: lineItems, date: data.date });
       localStorage.setItem('receipts', JSON.stringify(existing));
     } catch (_) { /* ignore storage errors */ }
 
-    // If email is provided, POST to local email endpoint
-    if (data.email) {
-      const payload = {
-        to: data.email,
-        customer: data.customer,
-        item: data.item,
-        amount: formatCurrency(data.amount),
-        date: formatDate(data.date),
-        message: data.message || ''
-      };
-      fetch('/send-receipt', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      }).catch(() => { /* ignore errors on client */ });
-    }
-
-    // Slight delay to ensure DOM updates before print dialog
     setTimeout(() => {
       window.print();
     }, 50);
   }
 
-  function handleReset() {
-    form.reset();
-    updateReceipt({ customer: '—', item: '—', amount: 0, date: '', message: 'Thank you for choosing Gadget Co!' });
+  function handleSendEmail(event) {
+      event.preventDefault(); 
+      
+      const { data, totalAmount } = finalizeReceiptData();
+      
+      sendReceiptEmail(data, totalAmount);
   }
 
-  // Prefill date with today
+
+  function handleReset() {
+    form.reset();
+    lineItems = []; 
+    updateReceipt({ customer: '', item: '', amount: '', date: '', message: 'Thank you for choosing SMART PHONES UGANDA!' });
+    
+    if (!inputDate.value) {
+        const tzOffset = new Date().getTimezoneOffset() * 60000;
+        const today = new Date(Date.now() - tzOffset).toISOString().slice(0, 10);
+        inputDate.value = today;
+    }
+  }
+
   if (!inputDate.value) {
     const tzOffset = new Date().getTimezoneOffset() * 60000;
     const today = new Date(Date.now() - tzOffset).toISOString().slice(0, 10);
@@ -98,19 +222,16 @@
   }
 
   // Wire events
-  form.addEventListener('submit', handleSubmit);
+  form.querySelector('.actions button:nth-child(2)').addEventListener('click', handleGenerateAndPrint);
+  sendEmailBtn.addEventListener('click', handleSendEmail);
+  form.addEventListener('submit', handleGenerateAndPrint); 
   resetBtn.addEventListener('click', handleReset);
+
 
   // Live preview updates
   [inputCustomer, inputEmail, inputItem, inputAmount, inputDate, inputMessage].filter(Boolean).forEach((input) => {
     input.addEventListener('input', () => {
-      updateReceipt({
-        customer: inputCustomer.value.trim(),
-        item: inputItem.value.trim(),
-        amount: inputAmount.value,
-        date: inputDate.value,
-        message: inputMessage.value.trim()
-      });
+        updateReceipt(getCurrentData());
     });
   });
 
@@ -120,8 +241,6 @@
     item: '',
     amount: '',
     date: inputDate.value,
-    message: 'Thank you for choosing Gadget Co!'
+    message: 'Thank you for choosing SMART PHONES UGANDA!'
   });
 })();
-
-

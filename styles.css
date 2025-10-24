@@ -39,10 +39,10 @@ body {
   width: 120px;
   height: 120px;
   border-radius: 20px;
-  background: transparent; /* remove white box */
-  padding: 0; /* remove inset padding/border look */
-  border: none; /* remove border */
-  box-shadow: 0 6px 18px rgba(0,0,0,0.35); /* subtle depth without border */
+  background: transparent;
+  padding: 0; 
+  border: none; 
+  box-shadow: 0 6px 18px rgba(0,0,0,0.35);
   filter: none;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
@@ -174,7 +174,6 @@ input:focus {
 .receipt-header, .receipt-body, .receipt-footer { width: 100%; }
 .receipt-body { padding: 28px 24px; }
 
-/* Make receipt column grow to fill space nicely on wide screens */
 @media (min-width: 920px) {
   #print-area.receipt { min-height: 100%; }
 }
@@ -207,7 +206,7 @@ input:focus {
 .receipt-logo { 
   filter: none;
   border-radius: 16px;
-  background: transparent; /* remove white box */
+  background: transparent; 
   padding: 0;
   border: none;
   box-shadow: 0 6px 16px rgba(0,0,0,0.25);
@@ -248,6 +247,23 @@ input:focus {
   font-size: 15px;
   font-weight: 500;
 }
+.row:nth-child(2){
+    display: flex;
+    flex-direction: column;
+}
+.row:nth-child(2) ul{
+    list-style-type: none;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+  margin: 0;
+  padding: 0;
+}
+.item-row{
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+}
 .row.message strong { 
   color: #059669; 
   font-weight: 600;
@@ -274,5 +290,6 @@ input:focus {
   .receipt { border: none; box-shadow: none; background: #fff; color: #000; }
   .row { border-bottom: 1px solid #ddd; }
 }
+
 
 
